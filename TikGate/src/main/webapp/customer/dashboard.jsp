@@ -67,10 +67,9 @@
         }
 
         .hero-football {
-            background:
-                linear-gradient(135deg, rgba(255, 107, 0, 0.18), rgba(21, 128, 61, 0.28)),
-                radial-gradient(circle at 72% 42%, rgba(255, 255, 255, 0.22) 0 8%, transparent 9%),
-                linear-gradient(120deg, #14532d 0%, #166534 42%, #0f172a 100%);
+            background-image: url("<%= request.getContextPath() %>/assets/homepage-banner.png");
+            background-position: center;
+            background-size: cover;
         }
 
         .hero-finals {
