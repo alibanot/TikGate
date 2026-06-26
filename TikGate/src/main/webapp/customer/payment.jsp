@@ -45,13 +45,13 @@
         }
 
         .payment-shell {
-            max-width: 1060px;
-            margin: 42px auto;
+            max-width: 920px;
+            margin: 22px auto;
         }
 
         .gateway-card {
             border: 0;
-            border-radius: 24px;
+            border-radius: 20px;
             overflow: hidden;
             box-shadow: 0 24px 70px rgba(17, 24, 39, 0.14);
             background: white;
@@ -64,7 +64,7 @@
             background-size: cover;
             background-position: center;
             color: white;
-            padding: 34px;
+            padding: 24px;
             min-height: 100%;
             position: relative;
         }
@@ -86,31 +86,33 @@
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            padding: 8px 12px;
+            padding: 7px 11px;
             border-radius: 999px;
             background: rgba(255,255,255,0.12);
             border: 1px solid rgba(255,255,255,0.22);
             font-weight: 800;
             font-size: 0.86rem;
-            margin-bottom: 28px;
+            margin-bottom: 18px;
         }
 
         .gateway-left h1 {
+            font-size: 2rem;
             font-weight: 900;
             line-height: 1.05;
-            margin-bottom: 14px;
+            margin-bottom: 10px;
         }
 
         .gateway-left p {
             color: rgba(255,255,255,0.78);
-            margin-bottom: 34px;
+            margin-bottom: 22px;
+            font-size: 0.92rem;
         }
 
         .amount-box {
             background: rgba(255,255,255,0.12);
             border: 1px solid rgba(255,255,255,0.22);
-            border-radius: 18px;
-            padding: 20px;
+            border-radius: 16px;
+            padding: 16px;
             backdrop-filter: blur(12px);
         }
 
@@ -123,13 +125,13 @@
 
         .amount-box strong {
             display: block;
-            font-size: 2.35rem;
+            font-size: 2rem;
             line-height: 1;
             margin-top: 8px;
         }
 
         .gateway-main {
-            padding: 34px;
+            padding: 24px 28px;
         }
 
         .gateway-title {
@@ -137,10 +139,11 @@
             justify-content: space-between;
             gap: 16px;
             align-items: start;
-            margin-bottom: 24px;
+            margin-bottom: 16px;
         }
 
         .gateway-title h2 {
+            font-size: 1.75rem;
             font-weight: 900;
             margin: 0;
         }
@@ -150,7 +153,7 @@
             color: #9a3412;
             border: 1px solid var(--tg-line);
             border-radius: 999px;
-            padding: 8px 12px;
+            padding: 7px 11px;
             font-weight: 900;
             white-space: nowrap;
         }
@@ -159,13 +162,13 @@
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 12px;
-            margin-bottom: 22px;
+            margin-bottom: 14px;
         }
 
         .method-option {
             border: 1px solid #e5e7eb;
             border-radius: 14px;
-            padding: 14px;
+            padding: 11px 12px;
             font-weight: 900;
             display: flex;
             align-items: center;
@@ -190,7 +193,7 @@
 
         .form-control,
         .form-select {
-            min-height: 50px;
+            min-height: 44px;
             border-radius: 12px;
             border-color: #dbe3ef;
             font-weight: 700;
@@ -203,24 +206,24 @@
         }
 
         .card-preview {
-            border-radius: 18px;
+            border-radius: 16px;
             background: linear-gradient(135deg, #111827, #0f2f75);
             color: white;
-            padding: 22px;
-            margin: 20px 0;
-            min-height: 150px;
+            padding: 18px;
+            margin: 14px 0 16px;
+            min-height: 124px;
             box-shadow: 0 18px 42px rgba(15, 47, 117, 0.25);
         }
 
         .card-preview-number {
             letter-spacing: 0.12em;
             font-size: 1.05rem;
-            margin-top: 28px;
+            margin-top: 20px;
             font-weight: 800;
         }
 
         .pay-button {
-            min-height: 54px;
+            min-height: 48px;
             border: 0;
             border-radius: 999px;
             background: var(--tg-orange);
@@ -238,17 +241,17 @@
             color: var(--tg-muted);
             font-size: 0.82rem;
             text-align: center;
-            margin-top: 14px;
+            margin-top: 10px;
         }
 
         @media (max-width: 768px) {
             .payment-shell {
-                margin: 20px auto;
+                margin: 14px auto;
             }
 
             .gateway-left,
             .gateway-main {
-                padding: 24px;
+                padding: 20px;
             }
 
             .method-grid {
@@ -296,7 +299,7 @@
                             <div class="gateway-title">
                                 <div>
                                     <h2>Payment Method</h2>
-                                    <p class="text-muted mb-0">Choose any option below to continue the mock checkout.</p>
+                                    <p class="text-muted mb-0 small">Choose any option below to continue the mock checkout.</p>
                                 </div>
                                 <div class="booking-chip">#<%= bookingId %></div>
                             </div>
@@ -334,12 +337,12 @@
                                     </div>
                                 </div>
 
-                                <div class="mb-3">
+                                <div class="mb-2">
                                     <label class="form-label">Card Number</label>
                                     <input type="text" class="form-control" id="cardNumber" placeholder="4242 4242 4242 4242" inputmode="numeric" maxlength="19" required>
                                 </div>
 
-                                <div class="row g-3">
+                                <div class="row g-2">
                                     <div class="col-md-6">
                                         <label class="form-label">Expiry</label>
                                         <input type="text" class="form-control" id="expiry" placeholder="MM/YY" maxlength="5" required>
@@ -350,7 +353,7 @@
                                     </div>
                                 </div>
 
-                                <button type="submit" class="btn pay-button w-100 mt-4">
+                                <button type="submit" class="btn pay-button w-100 mt-3">
                                     <i class="fas fa-lock me-2"></i>Pay RM<%= String.format("%.2f", totalAmount) %>
                                 </button>
                                 <div class="fine-print">Mock payment only. Use any test card details to continue.</div>

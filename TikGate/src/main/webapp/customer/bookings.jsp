@@ -9,21 +9,6 @@
 
     BookingDAO bookingDAO = new BookingDAO();
     List bookings = bookingDAO.getBookingsByUser(user.getUserId());
-    int totalBookings = bookings == null ? 0 : bookings.size();
-    int pendingCount = 0;
-    int paidCount = 0;
-    double totalSpent = 0.0;
-    if (bookings != null) {
-        for (int i = 0; i < bookings.size(); i++) {
-            Booking b = (Booking) bookings.get(i);
-            if ("PAID".equals(b.getStatus())) {
-                paidCount++;
-                totalSpent += b.getTotalAmount();
-            } else if ("PENDING".equals(b.getStatus())) {
-                pendingCount++;
-            }
-        }
-    }
 %>
 <!DOCTYPE html>
 <html lang="en">
@@ -55,72 +40,22 @@
             padding: 24px 4px 48px;
         }
 
-        .bookings-hero {
-            background:
-                linear-gradient(135deg, rgba(15, 47, 117, 0.92), rgba(17, 24, 39, 0.96)),
-                url("<%= request.getContextPath() %>/assets/homepage-banner.png");
-            background-size: cover;
-            background-position: center;
-            border-radius: 22px;
-            color: white;
-            padding: 30px;
-            box-shadow: 0 22px 54px rgba(17, 24, 39, 0.15);
-            margin-bottom: 24px;
-        }
-
-        .bookings-hero h1 {
-            font-size: clamp(1.8rem, 3vw, 3rem);
-            font-weight: 900;
-            margin: 0;
-        }
-
-        .bookings-hero p {
-            color: rgba(255,255,255,0.78);
-            max-width: 640px;
-            margin: 8px 0 0;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 14px;
-            margin-top: 24px;
-        }
-
-        .stat-tile {
-            background: rgba(255,255,255,0.12);
-            border: 1px solid rgba(255,255,255,0.22);
-            border-radius: 16px;
-            padding: 16px;
-            backdrop-filter: blur(10px);
-        }
-
-        .stat-tile span {
-            display: block;
-            color: rgba(255,255,255,0.72);
-            font-size: 0.8rem;
-            font-weight: 800;
-            text-transform: uppercase;
-        }
-
-        .stat-tile strong {
-            display: block;
-            font-size: 1.65rem;
-            line-height: 1.1;
-            margin-top: 4px;
-        }
-
         .section-heading {
             display: flex;
             justify-content: space-between;
             align-items: center;
             gap: 14px;
-            margin: 28px 0 16px;
+            margin: 4px 0 18px;
         }
 
         .section-heading h2 {
+            font-size: clamp(1.8rem, 3vw, 2.5rem);
             font-weight: 900;
             margin: 0;
+        }
+
+        .section-heading p {
+            color: var(--tg-muted);
         }
 
         .booking-grid {
@@ -293,11 +228,6 @@
         }
 
         @media (max-width: 768px) {
-            .bookings-hero {
-                padding: 22px;
-            }
-
-            .stats-grid,
             .booking-grid {
                 grid-template-columns: 1fr;
             }
@@ -314,31 +244,6 @@
 
 <main class="main-content">
     <div class="container-fluid bookings-shell">
-        <section class="bookings-hero">
-            <div class="d-flex flex-wrap justify-content-between gap-3 align-items-start">
-                <div>
-                    <h1>My Bookings</h1>
-                    <p>Track pending payments, open your paid tickets, and keep every stadium booking in one place.</p>
-                </div>
-                <a href="dashboard.jsp#events" class="btn btn-light rounded-pill px-4 fw-bold"><i class="fas fa-magnifying-glass me-2"></i>Find Events</a>
-            </div>
-
-            <div class="stats-grid">
-                <div class="stat-tile">
-                    <span>Total Bookings</span>
-                    <strong><%= totalBookings %></strong>
-                </div>
-                <div class="stat-tile">
-                    <span>Pending Payment</span>
-                    <strong><%= pendingCount %></strong>
-                </div>
-                <div class="stat-tile">
-                    <span>Paid Amount</span>
-                    <strong>RM<%= String.format("%.2f", totalSpent) %></strong>
-                </div>
-            </div>
-        </section>
-
         <% if (bookings == null || bookings.isEmpty()) { %>
             <div class="empty-state">
                 <i class="fas fa-ticket-alt"></i>
@@ -349,9 +254,10 @@
         <% } else { %>
             <div class="section-heading">
                 <div>
-                    <h2>Recent Bookings</h2>
-                    <p class="text-muted mb-0">Newest bookings appear first.</p>
+                    <h2>My Bookings</h2>
+                    <p class="mb-0">Track pending payments and open your paid tickets.</p>
                 </div>
+                <a href="dashboard.jsp#events" class="btn btn-booking-primary px-4"><i class="fas fa-magnifying-glass me-2"></i>Find Events</a>
             </div>
 
             <div class="booking-grid">
