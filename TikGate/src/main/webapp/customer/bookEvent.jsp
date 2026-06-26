@@ -454,7 +454,7 @@
                         <div class="card-header d-flex justify-content-between align-items-center">
                             <div>
                                 <h5 class="mb-1 fw-bold">Stadium Seat Map</h5>
-                                <div class="text-muted small">Compact view: 4 sections, up to 3 rows per section, 5 seats per row.</div>
+                                <div class="text-muted small">Compact view: North/South have 3 longer rows, East/West stay compact.</div>
                             </div>
                             <a href="dashboard.jsp" class="btn btn-outline-secondary rounded-pill">Back</a>
                         </div>
