@@ -8,6 +8,29 @@ import java.util.List;
 import java.util.Date;
 
 public class BookingDAO {
+    public Booking getBookingById(int bookingId) {
+        String sql = "SELECT * FROM BOOKING WHERE BOOKING_ID = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, bookingId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    Booking b = new Booking();
+                    b.setBookingId(rs.getInt("BOOKING_ID"));
+                    b.setUserId(rs.getInt("USER_ID"));
+                    b.setEventId(rs.getInt("EVENT_ID"));
+                    b.setBookingDate(rs.getDate("BOOKING_DATE"));
+                    b.setTotalAmount(rs.getDouble("TOTAL_AMOUNT"));
+                    b.setStatus(rs.getString("STATUS"));
+                    return b;
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
     public List<Booking> getBookingsByUser(int userId) {
         List<Booking> bookings = new ArrayList<>();
         String sql = "SELECT * FROM BOOKING WHERE USER_ID = ? ORDER BY BOOKING_DATE DESC";
