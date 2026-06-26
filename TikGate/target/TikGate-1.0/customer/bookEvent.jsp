@@ -1,5 +1,49 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ page import="com.tikgate.model.*, com.tikgate.dao.*, java.util.*" %>
+<%!
+    private String renderSeatSection(String sectionName, String sectionCode, Map sectionRows, SeatDAO seatDAO, int eventId) {
+        StringBuilder html = new StringBuilder();
+        html.append("<section class=\"seat-section\">");
+        html.append("<div class=\"section-heading\"><strong>").append(sectionCode).append("</strong><span>").append(sectionName).append("</span></div>");
+
+        Map rows = (Map) sectionRows.get(sectionName);
+        if (rows == null || rows.isEmpty()) {
+            html.append("<div class=\"empty-section\">No seats</div>");
+            html.append("</section>");
+            return html.toString();
+        }
+
+        int renderedRows = 0;
+        Iterator rowIterator = rows.keySet().iterator();
+        while (rowIterator.hasNext() && renderedRows < 3) {
+            String rowNo = (String) rowIterator.next();
+            List rowSeats = (List) rows.get(rowNo);
+            html.append("<div class=\"seat-row\">");
+            html.append("<span class=\"row-name\">Row ").append(rowNo).append("</span>");
+            html.append("<div class=\"seat-dots\">");
+
+            for (int i = 0; i < rowSeats.size(); i++) {
+                Seat s = (Seat) rowSeats.get(i);
+                boolean available = seatDAO.isSeatAvailable(eventId, s.getSeatId());
+                String label = s.getRowNo() + s.getSeatNumber();
+                html.append("<label class=\"seat-label").append(available ? "" : " seat-booked").append("\" title=\"")
+                    .append(sectionName).append(" | Row ").append(s.getRowNo()).append(" Seat ").append(s.getSeatNumber()).append("\">");
+                if (available) {
+                    html.append("<input type=\"checkbox\" name=\"seatIds\" value=\"").append(s.getSeatId())
+                        .append("\" class=\"seat-input\" data-seat=\"").append(sectionCode).append(" ").append(label).append("\">");
+                }
+                html.append("<span class=\"seat-face\">").append(label).append("</span>");
+                html.append("</label>");
+            }
+
+            html.append("</div></div>");
+            renderedRows++;
+        }
+
+        html.append("</section>");
+        return html.toString();
+    }
+%>
 <%
     User user = (User) session.getAttribute("user");
     if (user == null || user.getRoleId() != 2) {
@@ -18,81 +62,366 @@
         response.sendRedirect("dashboard.jsp");
         return;
     }
+
     SeatDAO seatDAO = new SeatDAO();
     List<Seat> seats = seatDAO.getAllSeats();
-    
-    // Group seats by section - Using compatible syntax
-    Map sectionSeats = new LinkedHashMap();
+    Map sectionRows = new LinkedHashMap();
     for (int i = 0; i < seats.size(); i++) {
         Seat s = (Seat) seats.get(i);
         String section = s.getSectionName();
-        if (!sectionSeats.containsKey(section)) {
-            sectionSeats.put(section, new ArrayList());
+        String row = s.getRowNo();
+        if (!sectionRows.containsKey(section)) {
+            sectionRows.put(section, new LinkedHashMap());
         }
-        List sectionList = (List) sectionSeats.get(section);
-        sectionList.add(s);
+        Map rows = (Map) sectionRows.get(section);
+        if (!rows.containsKey(row)) {
+            rows.put(row, new ArrayList());
+        }
+        ((List) rows.get(row)).add(s);
     }
+
+    TournamentDAO tourDAO = new TournamentDAO();
+    List allTours = tourDAO.getAllTournaments();
+    String tourName = "General";
+    for (int i = 0; i < allTours.size(); i++) {
+        Tournament t = (Tournament) allTours.get(i);
+        if (t.getTournamentId() == event.getTournamentId()) {
+            tourName = t.getTournamentName();
+            break;
+        }
+    }
+
+    double ticketPrice = 150.00;
 %>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TikGate - Book Event</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        body { background-color: #f8f9fa; }
-        .stadium-container { 
-            background: #1a472a; 
-            padding: 40px; 
-            border-radius: 50px; 
-            position: relative; 
-            margin: 20px auto; 
-            border: 5px solid #2d5a3f;
-            max-width: 900px;
+        :root {
+            --tg-orange: #ff6b00;
+            --tg-ink: #111827;
+            --tg-muted: #64748b;
+            --tg-field: #2f8f3a;
+            --tg-seat: #f8fafc;
+            --tg-selected: #facc15;
+            --tg-booked: #92400e;
+            --tg-blue: #2446ff;
+        }
+
+        body {
+            background: #fffaf5;
+            color: var(--tg-ink);
+        }
+
+        .booking-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: end;
+            gap: 18px;
+            margin-bottom: 18px;
+        }
+
+        .booking-header h1 {
+            font-size: clamp(1.5rem, 2.4vw, 2.15rem);
+            font-weight: 900;
+            margin: 0;
+        }
+
+        .booking-header p {
+            color: var(--tg-muted);
+            margin: 6px 0 0;
+        }
+
+        .stadium-card,
+        .summary-card {
+            border: 0;
+            border-radius: 18px;
+            box-shadow: 0 18px 42px rgba(17, 24, 39, 0.08);
+            overflow: hidden;
+        }
+
+        .stadium-card .card-header {
+            background: white;
+            border-bottom: 1px solid #f1e2d6;
+            padding: 16px 20px;
+        }
+
+        .stadium-wrap {
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 24px;
+            max-width: 820px;
+            margin: 0 auto;
+            padding: 18px;
+        }
+
+        .stadium-map {
+            position: relative;
+            display: grid;
+            grid-template-columns: 178px minmax(260px, 1fr) 178px;
+            grid-template-rows: auto 220px auto;
+            grid-template-areas:
+                ". north ."
+                "west pitch east"
+                ". south .";
+            gap: 12px;
+            align-items: center;
+        }
+
+        .pitch {
+            grid-area: pitch;
+            min-height: 218px;
+            border: 10px solid var(--tg-blue);
+            border-radius: 18px;
+            background:
+                linear-gradient(90deg, rgba(255,255,255,0.12) 1px, transparent 1px),
+                linear-gradient(0deg, rgba(255,255,255,0.12) 1px, transparent 1px),
+                repeating-linear-gradient(90deg, #2f8f3a 0 28px, #277d34 28px 56px);
+            background-size: 48px 48px, 48px 48px, auto;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            box-shadow: inset 0 0 0 2px rgba(255,255,255,0.35);
+        }
+
+        .pitch strong {
+            font-size: clamp(1.35rem, 3vw, 2.5rem);
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.35);
+        }
+
+        .north-zone { grid-area: north; }
+        .south-zone { grid-area: south; }
+        .east-zone { grid-area: east; }
+        .west-zone { grid-area: west; }
+
+        .seat-zone {
+            display: grid;
+            gap: 8px;
+        }
+
+        .seat-section {
+            background: #f8fafc;
+            border: 1px solid #e5e7eb;
+            border-radius: 14px;
+            padding: 8px;
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.7);
+        }
+
+        .section-heading {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 7px;
+            font-size: 0.72rem;
+            text-transform: uppercase;
+        }
+
+        .section-heading strong {
+            color: white;
+            background: var(--tg-orange);
+            border-radius: 999px;
+            padding: 4px 8px;
+            letter-spacing: 0.04em;
+        }
+
+        .section-heading span {
+            color: var(--tg-muted);
+            font-weight: 800;
+        }
+
+        .seat-row {
+            display: grid;
+            grid-template-columns: 44px 1fr;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 5px;
+        }
+
+        .seat-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .row-name {
+            color: var(--tg-muted);
+            font-size: 0.7rem;
+            font-weight: 900;
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        .seat-dots {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .seat-label {
+            margin: 0;
+            position: relative;
+        }
+
+        .seat-input {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .seat-face {
+            width: 26px;
+            height: 24px;
+            border-radius: 7px 7px 9px 9px;
+            background: var(--tg-seat);
+            color: #172554;
+            border: 1px solid #d1d5db;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.56rem;
+            font-weight: 900;
+            line-height: 1;
+            cursor: pointer;
+            box-shadow: inset 0 -3px 0 rgba(15, 23, 42, 0.1);
+            transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+        }
+
+        .seat-face:hover {
+            transform: translateY(-2px);
+            border-color: var(--tg-orange);
+        }
+
+        .seat-input:checked + .seat-face {
+            background: var(--tg-selected);
+            border-color: #f59e0b;
+            color: #422006;
+            transform: translateY(-2px);
+        }
+
+        .seat-booked .seat-face {
+            background: var(--tg-booked);
+            color: #fff7ed;
+            cursor: not-allowed;
+            opacity: 0.78;
+        }
+
+        .seat-booked .seat-face:hover {
+            transform: none;
+            border-color: #d1d5db;
+        }
+
+        .empty-section {
+            color: var(--tg-muted);
+            font-size: 0.8rem;
+            text-align: center;
+            padding: 12px;
+        }
+
+        .legend-row {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 16px;
+            margin-top: 16px;
+        }
+
+        .legend-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--tg-muted);
+            font-weight: 800;
+            font-size: 0.85rem;
+        }
+
+        .legend-box {
+            width: 18px;
+            height: 18px;
+            border-radius: 6px;
+            border: 1px solid #d1d5db;
+        }
+
+        .summary-card {
+            position: sticky;
+            top: 92px;
+        }
+
+        .summary-card .card-header {
+            background: #111827;
+            color: white;
+            border-bottom: 0;
+            padding: 18px;
+        }
+
+        .summary-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            min-height: 44px;
+            max-height: 170px;
+            overflow: auto;
+            padding: 12px;
+            background: #fff7ed;
+            border-radius: 12px;
+            color: #9a3412;
+            font-size: 0.9rem;
+            font-weight: 800;
+        }
+
+        .summary-total {
+            color: #0d6efd;
+            font-size: 2rem;
+            font-weight: 900;
+        }
+
+        .btn-pay {
+            background: var(--tg-orange);
+            border: 0;
+            color: white;
+            border-radius: 999px;
+            font-weight: 900;
+            padding: 12px 24px;
+        }
+
+        .btn-pay:hover {
+            background: #ea580c;
             color: white;
         }
-        .stadium-field { 
-            background: #2e7d32; 
-            height: 250px; 
-            border: 2px solid rgba(255,255,255,0.3); 
-            border-radius: 10px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            color: white; 
-            font-weight: bold; 
-            text-transform: uppercase; 
-            letter-spacing: 5px; 
-            margin: 20px 60px;
-            font-size: 2rem;
+
+        @media (max-width: 991px) {
+            .booking-header {
+                align-items: start;
+                flex-direction: column;
+            }
+
+            .stadium-map {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto;
+                grid-template-areas:
+                    "north"
+                    "west"
+                    "pitch"
+                    "east"
+                    "south";
+            }
+
+            .pitch {
+                min-height: 180px;
+            }
+
+            .summary-card {
+                position: static;
+                margin-top: 18px;
+            }
         }
-        .seat-block { 
-            display: inline-block; 
-            width: 25px; 
-            height: 25px; 
-            margin: 3px; 
-            border-radius: 5px; 
-            cursor: pointer; 
-            position: relative; 
-        }
-        .seat-available { background-color: #fff; border: 1px solid #ddd; }
-        .seat-available:hover { background-color: #f1c40f; border-color: #f39c12; }
-        .seat-taken { background-color: #8b4513; cursor: not-allowed; border: 1px solid #5d2e0d; }
-        .seat-radio { position: absolute; opacity: 0; cursor: pointer; height: 100%; width: 100%; top: 0; left: 0; margin: 0; z-index: 2; }
-        .seat-radio:checked + .seat-visual { background-color: #f1c40f; border: 2px solid #f39c12; }
-        .seat-visual { position: absolute; top: 0; left: 0; height: 100%; width: 100%; border-radius: 5px; transition: 0.2s; }
-        
-        .section-north { position: absolute; right: 20px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; align-items: center; }
-        .section-south { position: absolute; left: 20px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; align-items: center; }
-        .section-east { width: 100%; display: flex; flex-direction: column; align-items: center; margin-bottom: 10px; }
-        .section-west { width: 100%; display: flex; flex-direction: column; align-items: center; margin-top: 10px; }
-        
-        .section-label { font-weight: bold; margin: 5px; font-size: 0.9rem; text-transform: uppercase; }
-        .vertical-label { writing-mode: vertical-rl; text-orientation: mixed; }
-        
-        .legend-item { display: inline-flex; align-items: center; margin-right: 20px; }
-        .legend-box { width: 20px; height: 20px; border-radius: 3px; margin-right: 8px; }
     </style>
 </head>
 <body>
@@ -100,190 +429,163 @@
 
 <div class="main-content">
     <div class="container-fluid">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2>Book Ticket: <%= event.getEventName() %></h2>
-            <span class="badge bg-primary fs-6"><%= event.getEventDate() %></span>
+        <div class="booking-header">
+            <div>
+                <h1>Choose Your Seats</h1>
+                <p><%= event.getEventName() %> | <%= event.getEventDate() %> | <%= event.getStartTime() %></p>
+            </div>
+            <span class="badge rounded-pill text-bg-dark px-3 py-2"><i class="fas fa-ticket me-1"></i> RM<%= String.format("%.2f", ticketPrice) %> per seat</span>
         </div>
 
         <% if (request.getParameter("error") != null) { %>
             <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <%= "seat_taken".equals(request.getParameter("error")) ? "Sorry, that seat was just taken. Please choose another." : "Booking failed. Please try again." %>
+                <%= "seat_taken".equals(request.getParameter("error")) ? "Sorry, one of those seats was just taken. Please choose again." : "Booking failed. Please try again." %>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         <% } %>
 
-        <div class="row">
-            <div class="col-lg-9">
-                <div class="card shadow-sm border-0">
-                    <div class="card-header bg-white">
-                        <h5 class="mb-0">Select Your Seat</h5>
-                    </div>
-                    <div class="card-body bg-light">
-                        <form action="../bookTicket" method="post" id="bookingForm">
-                            <input type="hidden" name="eventId" value="<%= eventId %>">
-                            <input type="hidden" name="price" value="150.00">
-                            
-                            <div class="stadium-container">
-                                <!-- East Section (Top) -->
-                                <div class="section-east">
-                                    <span class="section-label">Section: East</span>
-                                    <div class="d-flex flex-wrap justify-content-center">
-                                        <% 
-                                            List eastSeats = (List) sectionSeats.get("East");
-                                            if (eastSeats == null) eastSeats = new ArrayList();
-                                            for (int i = 0; i < eastSeats.size(); i++) {
-                                                Seat s = (Seat) eastSeats.get(i);
-                                                boolean available = seatDAO.isSeatAvailable(eventId, s.getSeatId());
-                                        %>
-                                            <div class="seat-block <%= available ? "seat-available" : "seat-taken" %>" title="Section East | Row <%= s.getRowNo() %> Seat <%= s.getSeatNumber() %>">
-                                                <% if (available) { %>
-                                                    <input type="radio" name="seatId" value="<%= s.getSeatId() %>" class="seat-radio" required>
-                                                    <div class="seat-visual"></div>
-                                                <% } %>
-                                            </div>
-                                        <% } %>
-                                    </div>
-                                    <div class="seat-block seat-available mt-1" style="cursor: default;"></div>
-                                </div>
+        <form action="../bookTicket" method="post" id="bookingForm">
+            <input type="hidden" name="eventId" value="<%= eventId %>">
+            <input type="hidden" name="price" value="<%= String.format("%.2f", ticketPrice) %>">
 
-                                <div class="position-relative">
-                                    <!-- South Section (Left) -->
-                                    <div class="section-south">
-                                        <span class="section-label vertical-label">Section: South</span>
-                                        <% 
-                                            List southSeats = (List) sectionSeats.get("South");
-                                            if (southSeats == null) southSeats = new ArrayList();
-                                            for (int i = 0; i < southSeats.size(); i++) {
-                                                Seat s = (Seat) southSeats.get(i);
-                                                boolean available = seatDAO.isSeatAvailable(eventId, s.getSeatId());
-                                        %>
-                                            <div class="seat-block <%= available ? "seat-available" : "seat-taken" %>" title="Section South | Row <%= s.getRowNo() %> Seat <%= s.getSeatNumber() %>">
-                                                <% if (available) { %>
-                                                    <input type="radio" name="seatId" value="<%= s.getSeatId() %>" class="seat-radio" required>
-                                                    <div class="seat-visual"></div>
-                                                <% } %>
-                                            </div>
-                                        <% } %>
+            <div class="row g-4">
+                <div class="col-xl-9">
+                    <div class="card stadium-card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 class="mb-1 fw-bold">Stadium Seat Map</h5>
+                                <div class="text-muted small">Compact view: 4 sections, up to 3 rows per section, 5 seats per row.</div>
+                            </div>
+                            <a href="dashboard.jsp" class="btn btn-outline-secondary rounded-pill">Back</a>
+                        </div>
+                        <div class="card-body bg-light p-3 p-lg-4">
+                            <div class="stadium-wrap">
+                                <div class="stadium-map">
+                                    <div class="seat-zone north-zone">
+                                        <%= renderSeatSection("North", "N1", sectionRows, seatDAO, eventId) %>
                                     </div>
 
-                                    <!-- The Pitch -->
-                                    <div class="stadium-field">The Pitch</div>
+                                    <div class="seat-zone west-zone">
+                                        <%= renderSeatSection("West", "W1", sectionRows, seatDAO, eventId) %>
+                                    </div>
 
-                                    <!-- North Section (Right) -->
-                                    <div class="section-north">
-                                        <span class="section-label vertical-label">Section: North</span>
-                                        <% 
-                                            List northSeats = (List) sectionSeats.get("North");
-                                            if (northSeats == null) northSeats = new ArrayList();
-                                            for (int i = 0; i < northSeats.size(); i++) {
-                                                Seat s = (Seat) northSeats.get(i);
-                                                boolean available = seatDAO.isSeatAvailable(eventId, s.getSeatId());
-                                        %>
-                                            <div class="seat-block <%= available ? "seat-available" : "seat-taken" %>" title="Section North | Row <%= s.getRowNo() %> Seat <%= s.getSeatNumber() %>">
-                                                <% if (available) { %>
-                                                    <input type="radio" name="seatId" value="<%= s.getSeatId() %>" class="seat-radio" required>
-                                                    <div class="seat-visual"></div>
-                                                <% } %>
-                                            </div>
-                                        <% } %>
+                                    <div class="pitch">
+                                        <strong>The Pitch</strong>
+                                    </div>
+
+                                    <div class="seat-zone east-zone">
+                                        <%= renderSeatSection("East", "E1", sectionRows, seatDAO, eventId) %>
+                                    </div>
+
+                                    <div class="seat-zone south-zone">
+                                        <%= renderSeatSection("South", "S1", sectionRows, seatDAO, eventId) %>
                                     </div>
                                 </div>
 
-                                <!-- West Section (Bottom) -->
-                                <div class="section-west">
-                                    <div class="seat-block seat-available mb-1" style="cursor: default;"></div>
-                                    <span class="section-label">Section: West</span>
-                                    <div class="d-flex flex-wrap justify-content-center">
-                                        <% 
-                                            List westSeats = (List) sectionSeats.get("West");
-                                            if (westSeats == null) westSeats = new ArrayList();
-                                            for (int i = 0; i < westSeats.size(); i++) {
-                                                Seat s = (Seat) westSeats.get(i);
-                                                boolean available = seatDAO.isSeatAvailable(eventId, s.getSeatId());
-                                        %>
-                                            <div class="seat-block <%= available ? "seat-available" : "seat-taken" %>" title="Section West | Row <%= s.getRowNo() %> Seat <%= s.getSeatNumber() %>">
-                                                <% if (available) { %>
-                                                    <input type="radio" name="seatId" value="<%= s.getSeatId() %>" class="seat-radio" required>
-                                                    <div class="seat-visual"></div>
-                                                <% } %>
-                                            </div>
-                                        <% } %>
-                                    </div>
-                                </div>
-                                
-                                <!-- Legend -->
-                                <div class="mt-5 text-center">
-                                    <div class="legend-item">
-                                        <div class="legend-box" style="background-color: #fff; border: 1px solid #ddd;"></div>
-                                        <span>Available</span>
-                                    </div>
-                                    <div class="legend-item">
-                                        <div class="legend-box" style="background-color: #f1c40f;"></div>
-                                        <span>Selected</span>
-                                    </div>
-                                    <div class="legend-item">
-                                        <div class="legend-box" style="background-color: #8b4513;"></div>
-                                        <span>Booked</span>
-                                    </div>
+                                <div class="legend-row">
+                                    <div class="legend-item"><span class="legend-box" style="background:#f8fafc;"></span> Available</div>
+                                    <div class="legend-item"><span class="legend-box" style="background:#facc15;"></span> Selected</div>
+                                    <div class="legend-item"><span class="legend-box" style="background:#92400e;"></span> Booked</div>
                                 </div>
                             </div>
-                            
-                            <div class="mt-4 d-grid gap-2 d-md-flex justify-content-md-end">
-                                <a href="dashboard.jsp" class="btn btn-outline-secondary px-4">Cancel</a>
-                                <button type="submit" class="btn btn-primary px-5 btn-lg shadow-sm">Proceed to Payment</button>
-                            </div>
-                        </form>
+                        </div>
                     </div>
                 </div>
-            </div>
-            
-            <div class="col-lg-3">
-                <div class="card shadow-sm border-0 h-100">
-                    <div class="card-header bg-white">
-                        <h5 class="mb-0">Event Summary</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <label class="text-muted small d-block">Event Name</label>
-                            <span class="fw-bold fs-5"><%= event.getEventName() %></span>
+
+                <div class="col-xl-3">
+                    <div class="card summary-card">
+                        <div class="card-header">
+                            <h5 class="mb-0 fw-bold">Booking Summary</h5>
                         </div>
-                        <div class="mb-3">
-                            <label class="text-muted small d-block">Tournament</label>
-                            <% 
-                                TournamentDAO tourDAO = new TournamentDAO();
-                                List allTours = tourDAO.getAllTournaments();
-                                String tourName = "General";
-                                for (int i = 0; i < allTours.size(); i++) {
-                                    Tournament t = (Tournament) allTours.get(i);
-                                    if (t.getTournamentId() == event.getTournamentId()) {
-                                        tourName = t.getTournamentName();
-                                        break;
-                                    }
-                                }
-                            %>
-                            <span class="fw-bold"><%= tourName %></span>
-                        </div>
-                        <hr>
-                        <div class="mb-3">
-                            <label class="text-muted small d-block">Date & Time</label>
-                            <span class="fw-bold"><i class="far fa-calendar-alt me-1"></i> <%= event.getEventDate() %></span><br>
-                            <span class="fw-bold"><i class="far fa-clock me-1"></i> <%= event.getStartTime() %></span>
-                        </div>
-                        <hr>
-                        <div class="mb-4">
-                            <label class="text-muted small d-block">Ticket Price</label>
-                            <span class="fw-bold text-primary fs-4">$150.00</span>
-                        </div>
-                        <div class="alert alert-info small border-0">
-                            <i class="fas fa-info-circle me-1"></i> Please select a seat from the stadium layout to proceed.
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="text-muted small d-block">Event Name</label>
+                                <span class="fw-bold fs-5"><%= event.getEventName() %></span>
+                            </div>
+                            <div class="mb-3">
+                                <label class="text-muted small d-block">Tournament</label>
+                                <span class="fw-bold"><%= tourName %></span>
+                            </div>
+                            <hr>
+                            <div class="mb-3">
+                                <label class="text-muted small d-block">Date & Time</label>
+                                <span class="fw-bold"><i class="far fa-calendar-alt me-1"></i> <%= event.getEventDate() %></span><br>
+                                <span class="fw-bold"><i class="far fa-clock me-1"></i> <%= event.getStartTime() %></span>
+                            </div>
+                            <hr>
+                            <div class="mb-3">
+                                <label class="text-muted small d-block">Selected Seats</label>
+                                <div class="summary-list" id="selectedSeats">No seats selected</div>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted">Quantity</span>
+                                <strong><span id="seatCount">0</span> seat(s)</strong>
+                            </div>
+                            <div class="d-flex justify-content-between mb-3">
+                                <span class="text-muted">Price per seat</span>
+                                <strong>RM<%= String.format("%.2f", ticketPrice) %></strong>
+                            </div>
+                            <label class="text-muted small d-block">Total Amount</label>
+                            <div class="summary-total mb-4">RM<span id="totalAmount">0.00</span></div>
+                            <div class="alert alert-info small border-0" id="seatHelp">
+                                <i class="fas fa-info-circle me-1"></i> Select at least one seat to proceed.
+                            </div>
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-pay btn-lg" id="submitBooking" disabled>
+                                    Proceed to Payment
+                                </button>
+                                <a href="dashboard.jsp" class="btn btn-outline-secondary rounded-pill">Cancel</a>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </form>
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const ticketPrice = <%= String.format(java.util.Locale.US, "%.2f", ticketPrice) %>;
+    const bookingForm = document.getElementById('bookingForm');
+    const selectedSeats = document.getElementById('selectedSeats');
+    const seatCount = document.getElementById('seatCount');
+    const totalAmount = document.getElementById('totalAmount');
+    const submitBooking = document.getElementById('submitBooking');
+    const seatHelp = document.getElementById('seatHelp');
+    const seatInputs = Array.from(document.querySelectorAll('.seat-input'));
+
+    function updateSummary() {
+        const checkedSeats = seatInputs.filter(input => input.checked);
+        seatCount.textContent = checkedSeats.length;
+        totalAmount.textContent = (checkedSeats.length * ticketPrice).toFixed(2);
+        submitBooking.disabled = checkedSeats.length === 0;
+
+        if (checkedSeats.length === 0) {
+            selectedSeats.textContent = 'No seats selected';
+            seatHelp.className = 'alert alert-info small border-0';
+            seatHelp.innerHTML = '<i class="fas fa-info-circle me-1"></i> Select at least one seat to proceed.';
+            return;
+        }
+
+        selectedSeats.innerHTML = checkedSeats
+            .map(input => '<span><i class="fas fa-chair me-1"></i>' + input.dataset.seat + '</span>')
+            .join('');
+        seatHelp.className = 'alert alert-success small border-0';
+        seatHelp.innerHTML = '<i class="fas fa-check-circle me-1"></i> Ready for payment.';
+    }
+
+    seatInputs.forEach(input => input.addEventListener('change', updateSummary));
+
+    bookingForm.addEventListener('submit', function(event) {
+        if (!seatInputs.some(input => input.checked)) {
+            event.preventDefault();
+            seatHelp.className = 'alert alert-warning small border-0';
+            seatHelp.innerHTML = '<i class="fas fa-exclamation-circle me-1"></i> Please choose at least one seat.';
+        }
+    });
+
+    updateSummary();
+</script>
 </body>
 </html>

@@ -46,11 +46,19 @@ public class BookingDAO {
     }
 
     public int createBooking(Booking booking, int seatId, double price) {
+        return createBooking(booking, new int[] { seatId }, price);
+    }
+
+    public int createBooking(Booking booking, int[] seatIds, double pricePerSeat) {
         Connection conn = null;
         PreparedStatement pstmt = null;
         PreparedStatement pstmtItem = null;
         ResultSet rs = null;
         try {
+            if (seatIds == null || seatIds.length == 0) {
+                return -1;
+            }
+
             conn = DBConnection.getConnection();
             conn.setAutoCommit(false);
 
@@ -62,7 +70,7 @@ public class BookingDAO {
             pstmt.setInt(1, booking.getUserId());
             pstmt.setInt(2, booking.getEventId());
             pstmt.setDate(3, new java.sql.Date(new Date().getTime()));
-            pstmt.setDouble(4, price);
+            pstmt.setDouble(4, pricePerSeat * seatIds.length);
             pstmt.setString(5, "PENDING");
             pstmt.executeUpdate();
 
@@ -73,14 +81,17 @@ public class BookingDAO {
             }
 
             if (bookingId > 0) {
-                // 2. Create Booking Item (Seat)
+                // 2. Create Booking Items (Seats)
                 String itemSql = "INSERT INTO BOOKING_ITEM (BOOKING_ITEM_ID, BOOKING_ID, SEAT_ID, PRICE) " +
                                  "VALUES (BOOKING_ITEM_SEQ.NEXTVAL, ?, ?, ?)";
                 pstmtItem = conn.prepareStatement(itemSql);
-                pstmtItem.setInt(1, bookingId);
-                pstmtItem.setInt(2, seatId);
-                pstmtItem.setDouble(3, price);
-                pstmtItem.executeUpdate();
+                for (int i = 0; i < seatIds.length; i++) {
+                    pstmtItem.setInt(1, bookingId);
+                    pstmtItem.setInt(2, seatIds[i]);
+                    pstmtItem.setDouble(3, pricePerSeat);
+                    pstmtItem.addBatch();
+                }
+                pstmtItem.executeBatch();
 
                 conn.commit();
                 return bookingId;

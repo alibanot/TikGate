@@ -25,28 +25,38 @@ public class BookingServlet extends HttpServlet {
 
         try {
             String eventIdStr = request.getParameter("eventId");
-            String seatIdStr = request.getParameter("seatId");
+            String[] seatIdValues = request.getParameterValues("seatIds");
             String priceStr = request.getParameter("price");
 
-            if (eventIdStr == null || seatIdStr == null || priceStr == null) {
+            if (seatIdValues == null) {
+                String legacySeatId = request.getParameter("seatId");
+                if (legacySeatId != null) {
+                    seatIdValues = new String[] { legacySeatId };
+                }
+            }
+
+            if (eventIdStr == null || seatIdValues == null || seatIdValues.length == 0 || priceStr == null) {
                 response.sendRedirect("customer/dashboard.jsp?error=missing_params");
                 return;
             }
 
             int eventId = Integer.parseInt(eventIdStr);
-            int seatId = Integer.parseInt(seatIdStr);
             double price = Double.parseDouble(priceStr);
+            int[] seatIds = new int[seatIdValues.length];
 
-            if (!seatDAO.isSeatAvailable(eventId, seatId)) {
-                response.sendRedirect("customer/bookEvent.jsp?id=" + eventId + "&error=seat_taken");
-                return;
+            for (int i = 0; i < seatIdValues.length; i++) {
+                seatIds[i] = Integer.parseInt(seatIdValues[i]);
+                if (!seatDAO.isSeatAvailable(eventId, seatIds[i])) {
+                    response.sendRedirect("customer/bookEvent.jsp?id=" + eventId + "&error=seat_taken");
+                    return;
+                }
             }
 
             Booking booking = new Booking();
             booking.setUserId(user.getUserId());
             booking.setEventId(eventId);
             
-            int bookingId = bookingDAO.createBooking(booking, seatId, price);
+            int bookingId = bookingDAO.createBooking(booking, seatIds, price);
             
             if (bookingId > 0) {
                 response.sendRedirect("customer/payment.jsp?bookingId=" + bookingId);

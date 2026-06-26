@@ -73,10 +73,9 @@
         }
 
         .hero-finals {
-            background:
-                linear-gradient(135deg, rgba(255, 107, 0, 0.26), rgba(37, 99, 235, 0.16)),
-                repeating-linear-gradient(90deg, rgba(255,255,255,0.1) 0 2px, transparent 2px 120px),
-                linear-gradient(120deg, #1e293b 0%, #334155 48%, #111827 100%);
+            background-image: url("<%= request.getContextPath() %>/assets/homepage-app-slide.png");
+            background-position: center;
+            background-size: cover;
         }
 
         .hero-family {
@@ -263,25 +262,6 @@
             color: white;
         }
 
-        .suggestion-strip {
-            margin-top: 34px;
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 18px;
-        }
-
-        .suggestion-item {
-            background: white;
-            border: 1px solid var(--tg-line);
-            border-radius: 14px;
-            padding: 18px;
-        }
-
-        .suggestion-item i {
-            color: var(--tg-orange);
-            margin-right: 8px;
-        }
-
         @media (max-width: 1100px) {
             .event-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -297,8 +277,7 @@
                 min-height: 360px;
             }
 
-            .event-grid,
-            .suggestion-strip {
+            .event-grid {
                 grid-template-columns: 1fr;
             }
 
@@ -392,21 +371,6 @@
                     </div>
                 </article>
                 <% } %>
-            </div>
-        </section>
-
-        <section class="suggestion-strip" aria-label="Suggestions">
-            <div class="suggestion-item">
-                <strong><i class="fas fa-image"></i>Suggestion</strong>
-                <p class="mb-0 mt-2 text-muted">Add real football match images for each event so the cards feel more like ads.</p>
-            </div>
-            <div class="suggestion-item">
-                <strong><i class="fas fa-filter"></i>Suggestion</strong>
-                <p class="mb-0 mt-2 text-muted">Add filters for tournament, date, and price once the event list grows.</p>
-            </div>
-            <div class="suggestion-item">
-                <strong><i class="fas fa-mobile-screen"></i>Suggestion</strong>
-                <p class="mb-0 mt-2 text-muted">Keep tickets and bookings in the top menu for quick mobile access.</p>
             </div>
         </section>
     </div>

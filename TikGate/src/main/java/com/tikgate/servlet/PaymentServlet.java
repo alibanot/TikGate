@@ -27,21 +27,12 @@ public class PaymentServlet extends HttpServlet {
         
         int bookingId = Integer.parseInt(bookingIdStr);
         
-        // In a real system, we'd process the actual payment here.
-        // We need to find the BOOKING_ITEM_ID for this BOOKING_ID
-        int bookingItemId = -1;
-        String findItemSql = "SELECT BOOKING_ITEM_ID FROM BOOKING_ITEM WHERE BOOKING_ID = ?";
+        String findItemSql = "SELECT BOOKING_ITEM_ID FROM BOOKING_ITEM WHERE BOOKING_ID = ? ORDER BY BOOKING_ITEM_ID";
         
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(findItemSql)) {
             pstmt.setInt(1, bookingId);
-            try (ResultSet rs = pstmt.executeQuery()) {
-                if (rs.next()) {
-                    bookingItemId = rs.getInt("BOOKING_ITEM_ID");
-                }
-            }
-            
-            if (bookingItemId != -1) {
+            try (ResultSet rs = pstmt.executeQuery()) {            
                 // Update booking status to PAID
                 String updateStatusSql = "UPDATE BOOKING SET STATUS = 'PAID' WHERE BOOKING_ID = ?";
                 try (PreparedStatement updatePstmt = conn.prepareStatement(updateStatusSql)) {
@@ -49,34 +40,44 @@ public class PaymentServlet extends HttpServlet {
                     updatePstmt.executeUpdate();
                 }
 
-                Ticket ticket = new Ticket();
-                ticket.setBookingItemId(bookingItemId);
-                String qrCode = UUID.randomUUID().toString();
-                ticket.setQrCode(qrCode);
-                String pdfFileName = "ticket_" + bookingId + ".pdf";
-                ticket.setPdfFile(pdfFileName);
-                ticket.setGeneratedDate(new Date());
-                ticket.setStatus("VALID");
+                String firstQrCode = null;
+                int ticketCount = 0;
 
-                if (ticketDAO.createTicket(ticket)) {
-                    // Generate QR and PDF
-                    try {
-                        String path = getServletContext().getRealPath("/") + "tickets" + File.separator;
-                        File directory = new File(path);
-                        if (!directory.exists()) {
-                            directory.mkdirs();
+                while (rs.next()) {
+                    int bookingItemId = rs.getInt("BOOKING_ITEM_ID");
+                    Ticket ticket = new Ticket();
+                    ticket.setBookingItemId(bookingItemId);
+                    String qrCode = UUID.randomUUID().toString();
+                    ticket.setQrCode(qrCode);
+                    String pdfFileName = "ticket_" + bookingId + "_" + bookingItemId + ".pdf";
+                    ticket.setPdfFile(pdfFileName);
+                    ticket.setGeneratedDate(new Date());
+                    ticket.setStatus("VALID");
+
+                    if (ticketDAO.createTicket(ticket)) {
+                        if (firstQrCode == null) {
+                            firstQrCode = qrCode;
                         }
-                        QRGenerator.generateQRCodeImage(qrCode, 200, 200, path + qrCode + ".png");
-                        PDFGenerator.generateTicketPDF("Ticket ID: " + qrCode + "\nBooking ID: " + bookingId, path + pdfFileName);
-                    } catch (Exception e) { 
-                        e.printStackTrace(); 
+                        ticketCount++;
+                        try {
+                            String path = getServletContext().getRealPath("/") + "tickets" + File.separator;
+                            File directory = new File(path);
+                            if (!directory.exists()) {
+                                directory.mkdirs();
+                            }
+                            QRGenerator.generateQRCodeImage(qrCode, 200, 200, path + qrCode + ".png");
+                            PDFGenerator.generateTicketPDF("Ticket ID: " + qrCode + "\nBooking ID: " + bookingId, path + pdfFileName);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
                     }
-                    response.sendRedirect("customer/ticketDetails.jsp?qrCode=" + qrCode);
+                }
+
+                if (ticketCount > 0) {
+                    response.sendRedirect("customer/ticketDetails.jsp?qrCode=" + firstQrCode);
                 } else {
                     response.sendRedirect("customer/payment.jsp?bookingId=" + bookingId + "&error=ticket_creation_failed");
                 }
-            } else {
-                response.sendRedirect("customer/payment.jsp?bookingId=" + bookingId + "&error=booking_not_found");
             }
         } catch (SQLException e) {
             e.printStackTrace();
