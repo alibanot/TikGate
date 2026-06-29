@@ -1,11 +1,12 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
-<%@ page import="com.tikgate.model.*, com.tikgate.dao.*, java.util.List" %>
+<%@ page import="com.tikgate.model.*, com.tikgate.dao.*, com.tikgate.util.SecurityUtil, java.util.List" %>
 <%
     User user = (User) session.getAttribute("user");
     if (user == null || (user.getRoleId() != 1 && user.getRoleId() != 3)) {
         response.sendRedirect("../login.jsp");
         return;
     }
+    String csrfToken = SecurityUtil.ensureCsrfToken(request);
     CategoryDAO categoryDAO = new CategoryDAO();
     List categories = categoryDAO.getAllCategories();
     TournamentDAO tournamentDAO = new TournamentDAO();
@@ -27,25 +28,26 @@
         <div class="alert alert-success">Tournament added successfully!</div>
     <% } %>
     <% if (request.getParameter("error") != null) { %>
-        <div class="alert alert-danger">Error processing tournament request.</div>
+        <div class="alert alert-danger"><%= SecurityUtil.escapeHtml(request.getParameter("error")) %></div>
     <% } %>
 
     <div class="card mb-4">
         <div class="card-body">
             <h5 class="card-title">Add New Tournament</h5>
             <form action="manageTournaments" method="post" class="form-row align-items-center">
+                <input type="hidden" name="csrfToken" value="<%= csrfToken %>">
                 <div class="col-md-3 mb-2">
-                    <input type="text" name="name" class="form-control" placeholder="Tournament Name" required>
+                    <input type="text" name="name" class="form-control" placeholder="Tournament Name" maxlength="100" required>
                 </div>
                 <div class="col-md-4 mb-2">
-                    <input type="text" name="description" class="form-control" placeholder="Description">
+                    <input type="text" name="description" class="form-control" placeholder="Description" maxlength="255">
                 </div>
                 <div class="col-md-3 mb-2">
                     <select name="categoryId" class="form-control" required>
                         <option value="">Select Category</option>
                         <% for(int i=0; i<categories.size(); i++) { 
                             Category c = (Category) categories.get(i); %>
-                            <option value="<%= c.getCategoryId() %>"><%= c.getCategoryName() %></option>
+                            <option value="<%= c.getCategoryId() %>"><%= SecurityUtil.escapeHtml(c.getCategoryName()) %></option>
                         <% } %>
                     </select>
                 </div>
@@ -69,8 +71,8 @@
             %>
             <tr>
                 <td><%= t.getTournamentId() %></td>
-                <td><%= t.getTournamentName() %></td>
-                <td><%= t.getDescription() %></td>
+                <td><%= SecurityUtil.escapeHtml(t.getTournamentName()) %></td>
+                <td><%= SecurityUtil.escapeHtml(t.getDescription()) %></td>
             </tr>
             <% } %>
         </tbody>

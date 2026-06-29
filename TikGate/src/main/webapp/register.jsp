@@ -1,4 +1,13 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<%@ page import="com.tikgate.util.SecurityUtil" %>
+<%
+    String csrfToken = SecurityUtil.ensureCsrfToken(request);
+    String error = (String) request.getAttribute("error");
+    String fullName = (String) request.getAttribute("fullName");
+    String username = (String) request.getAttribute("username");
+    String email = (String) request.getAttribute("email");
+    String phone = (String) request.getAttribute("phone");
+%>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -21,27 +30,31 @@
     </div>
 
     <form action="register" method="post">
+        <input type="hidden" name="csrfToken" value="<%= csrfToken %>">
+        <% if (error != null) { %>
+            <div class="alert alert-danger py-2 small"><%= SecurityUtil.escapeHtml(error) %></div>
+        <% } %>
         <div class="row">
             <div class="col-md-6 mb-3">
                 <label class="form-label text-muted small fw-bold">Full Name</label>
-                <input type="text" name="fullName" class="form-control bg-light border-0" placeholder="John Doe" required>
+                <input type="text" name="fullName" class="form-control bg-light border-0" placeholder="John Doe" maxlength="100" value="<%= SecurityUtil.escapeHtml(fullName) %>" required>
             </div>
             <div class="col-md-6 mb-3">
                 <label class="form-label text-muted small fw-bold">Username</label>
-                <input type="text" name="username" class="form-control bg-light border-0" placeholder="johndoe" required>
+                <input type="text" name="username" class="form-control bg-light border-0" placeholder="johndoe" maxlength="30" pattern="[A-Za-z0-9_]{3,30}" value="<%= SecurityUtil.escapeHtml(username) %>" required>
             </div>
         </div>
         <div class="mb-3">
             <label class="form-label text-muted small fw-bold">Email Address</label>
-            <input type="email" name="email" class="form-control bg-light border-0" placeholder="john@example.com" required>
+            <input type="email" name="email" class="form-control bg-light border-0" placeholder="john@example.com" maxlength="100" value="<%= SecurityUtil.escapeHtml(email) %>" required>
         </div>
         <div class="mb-3">
             <label class="form-label text-muted small fw-bold">Phone Number</label>
-            <input type="text" name="phone" class="form-control bg-light border-0" placeholder="0123456789" required>
+            <input type="tel" name="phone" class="form-control bg-light border-0" placeholder="0123456789" inputmode="numeric" pattern="[0-9]{10,15}" maxlength="15" value="<%= SecurityUtil.escapeHtml(phone) %>" required>
         </div>
         <div class="mb-4">
             <label class="form-label text-muted small fw-bold">Password</label>
-            <input type="password" name="password" class="form-control bg-light border-0" placeholder="••••••••" required>
+            <input type="password" name="password" class="form-control bg-light border-0" placeholder="********" minlength="8" maxlength="72" required>
         </div>
         <div class="d-grid mb-3">
             <button type="submit" class="btn btn-primary">Create Account</button>

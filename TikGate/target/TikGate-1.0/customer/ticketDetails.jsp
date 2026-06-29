@@ -1,5 +1,5 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
-<%@ page import="com.tikgate.model.*, com.tikgate.dao.*, java.util.List" %>
+<%@ page import="com.tikgate.model.*, com.tikgate.dao.*, com.tikgate.util.SecurityUtil, com.tikgate.util.ValidationUtil, java.util.List" %>
 <%
     User user = (User) session.getAttribute("user");
     if (user == null || user.getRoleId() != 2) {
@@ -7,8 +7,12 @@
         return;
     }
     String qrCode = request.getParameter("qrCode");
+    if (!ValidationUtil.isValidQrCode(qrCode)) {
+        response.sendRedirect("dashboard.jsp");
+        return;
+    }
     TicketDAO ticketDAO = new TicketDAO();
-    Ticket ticket = ticketDAO.getTicketByQrCode(qrCode);
+    Ticket ticket = ticketDAO.getTicketByQrCodeForUser(qrCode, user.getUserId());
     if (ticket == null) {
         response.sendRedirect("dashboard.jsp");
         return;
@@ -48,7 +52,7 @@
                     <% } else { %>
                         <div class="qr-placeholder flex-column">
                             <i class="fas fa-qrcode fa-3x text-muted mb-2"></i>
-                            <span class="text-muted small">QR Code: <%= ticket.getQrCode() %></span>
+                            <span class="text-muted small">QR Code: <%= SecurityUtil.escapeHtml(ticket.getQrCode()) %></span>
                         </div>
                     <% } %>
                 </div>
@@ -56,11 +60,11 @@
                 <div class="row text-start mt-4">
                     <div class="col-6 mb-3">
                         <label class="text-muted small d-block">Ticket ID</label>
-                        <span class="fw-bold"><%= ticket.getQrCode() %></span>
+                        <span class="fw-bold"><%= SecurityUtil.escapeHtml(ticket.getQrCode()) %></span>
                     </div>
                     <div class="col-6 mb-3">
                         <label class="text-muted small d-block">Status</label>
-                        <span class="badge <%= ticket.getStatus().equals("VALID") ? "bg-success" : "bg-danger" %>"><%= ticket.getStatus() %></span>
+                        <span class="badge <%= ticket.getStatus().equals("VALID") ? "bg-success" : "bg-danger" %>"><%= SecurityUtil.escapeHtml(ticket.getStatus()) %></span>
                     </div>
                     <div class="col-12 mb-3">
                         <label class="text-muted small d-block">Generated On</label>

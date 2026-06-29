@@ -1,22 +1,41 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
-<%@ page import="com.tikgate.model.*, com.tikgate.dao.*" %>
+<%@ page import="com.tikgate.model.*, com.tikgate.dao.*, com.tikgate.util.SecurityUtil, com.tikgate.util.ValidationUtil" %>
 <%
     User user = (User) session.getAttribute("user");
     if (user == null || user.getRoleId() != 2) {
         response.sendRedirect("../login.jsp");
         return;
     }
+    String csrfToken = SecurityUtil.ensureCsrfToken(request);
     String bookingId = request.getParameter("bookingId");
-    if (bookingId == null || bookingId.isEmpty()) {
+    Integer bookingIdInt = ValidationUtil.parsePositiveInt(bookingId);
+    if (bookingIdInt == null) {
         response.sendRedirect("dashboard.jsp");
         return;
     }
 
     String error = request.getParameter("error");
-    int bookingIdInt = Integer.parseInt(bookingId);
     BookingDAO bookingDAO = new BookingDAO();
-    Booking booking = bookingDAO.getBookingById(bookingIdInt);
-    double totalAmount = booking != null ? booking.getTotalAmount() : 0.00;
+    Booking booking = bookingDAO.getBookingByIdForUser(bookingIdInt, user.getUserId());
+    if (booking == null) {
+        response.sendRedirect("dashboard.jsp?error=booking_not_found");
+        return;
+    }
+    if ("PAID".equals(booking.getStatus())) {
+        TicketDAO paidTicketDAO = new TicketDAO();
+        Ticket paidTicket = paidTicketDAO.getTicketByBookingId(bookingIdInt);
+        if (paidTicket != null) {
+            response.sendRedirect("ticketDetails.jsp?qrCode=" + java.net.URLEncoder.encode(paidTicket.getQrCode(), "UTF-8"));
+        } else {
+            response.sendRedirect("bookings.jsp?error=already_paid");
+        }
+        return;
+    }
+    if (!"PENDING".equals(booking.getStatus())) {
+        response.sendRedirect("bookings.jsp?error=invalid_booking_status");
+        return;
+    }
+    double totalAmount = booking.getTotalAmount();
 %>
 <!DOCTYPE html>
 <html lang="en">
@@ -271,7 +290,7 @@
     <div class="container-fluid">
         <div class="payment-shell">
             <% if (error != null) { %>
-                <div class="alert alert-danger border-0 shadow-sm"><%= error.replace("_", " ") %></div>
+                <div class="alert alert-danger border-0 shadow-sm"><%= SecurityUtil.escapeHtml(error.replace("_", " ")) %></div>
             <% } %>
 
             <div class="gateway-card">
@@ -288,8 +307,8 @@
                             </div>
 
                             <div class="d-flex justify-content-between small text-white-50">
-                                <span>Booking #<%= bookingId %></span>
-                                <span><%= booking != null ? booking.getStatus() : "PENDING" %></span>
+                                <span>Booking #<%= bookingIdInt %></span>
+                                <span><%= SecurityUtil.escapeHtml(booking != null ? booking.getStatus() : "PENDING") %></span>
                             </div>
                         </aside>
                     </div>
@@ -301,11 +320,12 @@
                                     <h2>Payment Method</h2>
                                     <p class="text-muted mb-0 small">Choose any option below to continue the mock checkout.</p>
                                 </div>
-                                <div class="booking-chip">#<%= bookingId %></div>
+                                <div class="booking-chip">#<%= bookingIdInt %></div>
                             </div>
 
                             <form action="../processPayment" method="post">
-                                <input type="hidden" name="bookingId" value="<%= bookingId %>">
+                                <input type="hidden" name="csrfToken" value="<%= csrfToken %>">
+                                <input type="hidden" name="bookingId" value="<%= bookingIdInt %>">
 
                                 <div class="method-grid">
                                     <label class="method-option">
@@ -332,24 +352,24 @@
                                     </div>
                                     <div class="card-preview-number" id="cardPreview">XXXX XXXX XXXX XXXX</div>
                                     <div class="d-flex justify-content-between mt-3 small text-white-50">
-                                        <span><%= user.getFullName() %></span>
+                                        <span><%= SecurityUtil.escapeHtml(user.getFullName()) %></span>
                                         <span id="expiryPreview">MM/YY</span>
                                     </div>
                                 </div>
 
                                 <div class="mb-2">
                                     <label class="form-label">Card Number</label>
-                                    <input type="text" class="form-control" id="cardNumber" placeholder="4242 4242 4242 4242" inputmode="numeric" maxlength="19" required>
+                                    <input type="text" name="cardNumber" class="form-control" id="cardNumber" placeholder="4242 4242 4242 4242" inputmode="numeric" maxlength="19" pattern="[0-9 ]{13,23}" required>
                                 </div>
 
                                 <div class="row g-2">
                                     <div class="col-md-6">
                                         <label class="form-label">Expiry</label>
-                                        <input type="text" class="form-control" id="expiry" placeholder="MM/YY" maxlength="5" required>
+                                        <input type="text" name="expiry" class="form-control" id="expiry" placeholder="MM/YY" maxlength="5" pattern="(0[1-9]|1[0-2])/[0-9]{2}" required>
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label">CVV</label>
-                                        <input type="password" class="form-control" placeholder="123" maxlength="4" inputmode="numeric" required>
+                                        <input type="password" name="cvv" class="form-control" placeholder="123" maxlength="4" inputmode="numeric" pattern="[0-9]{3,4}" required>
                                     </div>
                                 </div>
 

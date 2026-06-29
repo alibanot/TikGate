@@ -1,5 +1,5 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
-<%@ page import="com.tikgate.model.*, com.tikgate.dao.*, java.util.List" %>
+<%@ page import="com.tikgate.model.*, com.tikgate.dao.*, com.tikgate.util.SecurityUtil, java.util.List" %>
 <%
     User user = (User) session.getAttribute("user");
     if (user == null || user.getRoleId() != 2) {
@@ -7,7 +7,7 @@
         return;
     }
     EventDAO eventDAO = new EventDAO();
-    List events = eventDAO.getAllEvents();
+    List events = eventDAO.getActiveEvents();
 %>
 <!DOCTYPE html>
 <html lang="en">
@@ -361,9 +361,9 @@
                 <article class="event-card">
                     <div class="event-poster"></div>
                     <div class="event-body">
-                        <div class="event-date"><i class="far fa-calendar me-1"></i><%= e.getEventDate() %> <span class="ms-2"><i class="far fa-clock me-1"></i><%= e.getStartTime() %></span></div>
-                        <h3 class="event-title"><%= e.getEventName() %></h3>
-                        <p class="event-desc"><%= description %></p>
+                        <div class="event-date"><i class="far fa-calendar me-1"></i><%= e.getEventDate() %> <span class="ms-2"><i class="far fa-clock me-1"></i><%= SecurityUtil.escapeHtml(e.getStartTime()) %></span></div>
+                        <h3 class="event-title"><%= SecurityUtil.escapeHtml(e.getEventName()) %></h3>
+                        <p class="event-desc"><%= SecurityUtil.escapeHtml(description) %></p>
                     </div>
                     <div class="event-footer">
                         <span class="event-price">From RM150.00</span>

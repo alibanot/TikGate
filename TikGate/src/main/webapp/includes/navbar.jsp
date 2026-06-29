@@ -1,4 +1,4 @@
-<%@ page import="com.tikgate.model.User" %>
+<%@ page import="com.tikgate.model.User, com.tikgate.util.SecurityUtil" %>
 <%
     User currentUser = (User) session.getAttribute("user");
     String contextPath = request.getContextPath();
@@ -158,7 +158,7 @@
                     <% } %>
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="fas fa-user-circle me-1"></i><%= currentUser.getFullName() %>
+                            <i class="fas fa-user-circle me-1"></i><%= SecurityUtil.escapeHtml(currentUser.getFullName()) %>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
                             <li><span class="dropdown-item-text small text-muted"><%= currentRole %></span></li>

@@ -1,4 +1,9 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<%@ page import="com.tikgate.util.SecurityUtil" %>
+<%
+    String csrfToken = SecurityUtil.ensureCsrfToken(request);
+    String error = (String) request.getAttribute("error");
+%>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -22,11 +27,15 @@
         <p class="text-muted">Sign in to your TikGate account</p>
     </div>
 
-    <% if (request.getParameter("error") != null) { %>
-        <div class="alert alert-danger text-center py-2 small">Invalid username or password</div>
+    <% if (error != null || request.getParameter("error") != null) { %>
+        <div class="alert alert-danger text-center py-2 small"><%= SecurityUtil.escapeHtml(error != null ? error : "Invalid username or password") %></div>
+    <% } %>
+    <% if (request.getParameter("registered") != null) { %>
+        <div class="alert alert-success text-center py-2 small">Registration successful. Please sign in.</div>
     <% } %>
 
     <form action="login" method="post">
+        <input type="hidden" name="csrfToken" value="<%= csrfToken %>">
         <div class="mb-3">
             <label class="form-label text-muted small uppercase fw-bold">Username</label>
             <div class="input-group">

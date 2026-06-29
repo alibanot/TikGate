@@ -1,5 +1,5 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
-<%@ page import="com.tikgate.model.*, com.tikgate.dao.*, java.util.List" %>
+<%@ page import="com.tikgate.model.*, com.tikgate.dao.*, com.tikgate.util.SecurityUtil, java.util.List" %>
 <%
     User user = (User) session.getAttribute("user");
     if (user == null || user.getRoleId() != 1) {
@@ -28,7 +28,7 @@
     <div class="container-fluid">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2>Admin Dashboard</h2>
-            <div class="text-muted">Administrator: <%= user.getFullName() %></div>
+            <div class="text-muted">Administrator: <%= SecurityUtil.escapeHtml(user.getFullName()) %></div>
         </div>
 
         <div class="row g-4">

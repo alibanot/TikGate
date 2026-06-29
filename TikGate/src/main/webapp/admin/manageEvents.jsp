@@ -1,11 +1,12 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
-<%@ page import="com.tikgate.model.*, com.tikgate.dao.*, java.util.List" %>
+<%@ page import="com.tikgate.model.*, com.tikgate.dao.*, com.tikgate.util.SecurityUtil, java.util.List" %>
 <%
     User user = (User) session.getAttribute("user");
     if (user == null || (user.getRoleId() != 1 && user.getRoleId() != 3)) {
         response.sendRedirect("../login.jsp");
         return;
     }
+    String csrfToken = SecurityUtil.ensureCsrfToken(request);
     EventDAO eventDAO = new EventDAO();
     CategoryDAO categoryDAO = new CategoryDAO();
     TournamentDAO tournamentDAO = new TournamentDAO();
@@ -226,7 +227,7 @@
             <div class="alert alert-success border-0 shadow-sm">Event added successfully!</div>
         <% } %>
         <% if (request.getParameter("error") != null) { %>
-            <div class="alert alert-danger border-0 shadow-sm">Error processing event: <%= request.getParameter("error") %></div>
+            <div class="alert alert-danger border-0 shadow-sm"><%= SecurityUtil.escapeHtml(request.getParameter("error")) %></div>
         <% } %>
 
         <section class="admin-card">
@@ -236,10 +237,11 @@
             </div>
             <div class="card-body p-4">
                 <form action="manageEvents" method="post">
+                    <input type="hidden" name="csrfToken" value="<%= csrfToken %>">
                     <div class="row g-3">
                         <div class="col-lg-6">
                             <label class="form-label">Event Name</label>
-                            <input type="text" name="name" class="form-control" placeholder="e.g. Champions League Final" required>
+                            <input type="text" name="name" class="form-control" placeholder="e.g. Champions League Final" maxlength="100" required>
                         </div>
                         <div class="col-lg-3">
                             <label class="form-label">Category</label>
@@ -247,7 +249,7 @@
                                 <option value="">Select Category</option>
                                 <% for (int i = 0; i < categories.size(); i++) {
                                     Category c = (Category) categories.get(i); %>
-                                    <option value="<%= c.getCategoryId() %>"><%= c.getCategoryName() %></option>
+                                    <option value="<%= c.getCategoryId() %>"><%= SecurityUtil.escapeHtml(c.getCategoryName()) %></option>
                                 <% } %>
                             </select>
                         </div>
@@ -257,13 +259,13 @@
                                 <option value="">Select Tournament</option>
                                 <% for (int i = 0; i < tournaments.size(); i++) {
                                     Tournament t = (Tournament) tournaments.get(i); %>
-                                    <option value="<%= t.getTournamentId() %>" data-category="<%= t.getCategoryId() %>"><%= t.getTournamentName() %></option>
+                                    <option value="<%= t.getTournamentId() %>" data-category="<%= t.getCategoryId() %>"><%= SecurityUtil.escapeHtml(t.getTournamentName()) %></option>
                                 <% } %>
                             </select>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">Date</label>
-                            <input type="date" name="date" class="form-control" required>
+                            <input type="date" name="date" class="form-control" min="<%= java.time.LocalDate.now() %>" required>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">Start Time</label>
@@ -275,7 +277,7 @@
                         </div>
                         <div class="col-12">
                             <label class="form-label">Description</label>
-                            <textarea name="description" class="form-control" placeholder="Short description shown to customers"></textarea>
+                            <textarea name="description" class="form-control" placeholder="Short description shown to customers" maxlength="255"></textarea>
                         </div>
                     </div>
                     <div class="d-flex justify-content-end mt-4">
@@ -318,12 +320,12 @@
                         <tr>
                             <td class="fw-bold">#<%= e.getEventId() %></td>
                             <td>
-                                <div class="event-name"><%= e.getEventName() %></div>
-                                <div class="event-sub"><%= e.getStartTime() %> - <%= e.getEndTime() %></div>
+                                <div class="event-name"><%= SecurityUtil.escapeHtml(e.getEventName()) %></div>
+                                <div class="event-sub"><%= SecurityUtil.escapeHtml(e.getStartTime()) %> - <%= SecurityUtil.escapeHtml(e.getEndTime()) %></div>
                             </td>
-                            <td><%= eventTour != null ? eventTour.getTournamentName() : "N/A" %></td>
+                            <td><%= SecurityUtil.escapeHtml(eventTour != null ? eventTour.getTournamentName() : "N/A") %></td>
                             <td><%= e.getEventDate() %></td>
-                            <td><span class="status-pill"><i class="fas fa-circle-check"></i><%= e.getStatus() %></span></td>
+                            <td><span class="status-pill"><i class="fas fa-circle-check"></i><%= SecurityUtil.escapeHtml(e.getStatus()) %></span></td>
                         </tr>
                         <% } %>
                     </tbody>

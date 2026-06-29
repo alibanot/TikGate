@@ -5,11 +5,11 @@ INSERT INTO ROLE (ROLE_ID, ROLE_NAME) VALUES (ROLE_SEQ.NEXTVAL, 'STAFF');
 
 -- Users
 INSERT INTO USERS (USER_ID, ROLE_ID, USERNAME, PASSWORD, FULL_NAME, EMAIL, PHONE) VALUES 
-(USER_SEQ.NEXTVAL, 1, 'admin', 'admin123', 'System Administrator', 'admin@tikgate.com', '0123456789');
+(USER_SEQ.NEXTVAL, 1, 'admin', 'sha256:240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', 'System Administrator', 'admin@tikgate.com', '0123456789');
 INSERT INTO USERS (USER_ID, ROLE_ID, USERNAME, PASSWORD, FULL_NAME, EMAIL, PHONE) VALUES 
-(USER_SEQ.NEXTVAL, 2, 'customer', 'cust123', 'John Doe', 'john@example.com', '0112233445');
+(USER_SEQ.NEXTVAL, 2, 'customer', 'sha256:4f21b18a4c743a5da01bb3a4955dea0a0294a0b4f7977b454c7259e37b2e6c19', 'John Doe', 'john@example.com', '0112233445');
 INSERT INTO USERS (USER_ID, ROLE_ID, USERNAME, PASSWORD, FULL_NAME, EMAIL, PHONE) VALUES 
-(USER_SEQ.NEXTVAL, 3, 'staff', 'staff123', 'Staff Member', 'staff@tikgate.com', '0198765432');
+(USER_SEQ.NEXTVAL, 3, 'staff', 'sha256:10176e7b7b24d317acfcf8d2064cfd2f24e154f7b5a96603077d5ef813d6a6b6', 'Staff Member', 'staff@tikgate.com', '0198765432');
 
 -- Categories
 INSERT INTO CATEGORY (CATEGORY_ID, CATEGORY_NAME, DESCRIPTION) VALUES 

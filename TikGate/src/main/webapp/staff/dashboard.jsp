@@ -1,5 +1,5 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
-<%@ page import="com.tikgate.model.User" %>
+<%@ page import="com.tikgate.model.User, com.tikgate.util.SecurityUtil" %>
 <%
     User user = (User) session.getAttribute("user");
     if (user == null || user.getRoleId() != 3) {
@@ -27,7 +27,7 @@
     <div class="container-fluid">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2>Staff Dashboard</h2>
-            <div class="text-muted">Staff: <%= user.getFullName() %></div>
+            <div class="text-muted">Staff: <%= SecurityUtil.escapeHtml(user.getFullName()) %></div>
         </div>
 
         <div class="row">

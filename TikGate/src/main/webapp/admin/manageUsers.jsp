@@ -1,11 +1,12 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
-<%@ page import="com.tikgate.model.*, com.tikgate.dao.*, java.util.List" %>
+<%@ page import="com.tikgate.model.*, com.tikgate.dao.*, com.tikgate.util.SecurityUtil, java.util.List" %>
 <%
     User user = (User) session.getAttribute("user");
     if (user == null || user.getRoleId() != 1) {
         response.sendRedirect("../login.jsp");
         return;
     }
+    String csrfToken = SecurityUtil.ensureCsrfToken(request);
     UserDAO userDAO = new UserDAO();
     List users = userDAO.getAllUsers();
 %>
@@ -25,6 +26,12 @@
             <i class="fas fa-user-plus me-2"></i> Add New User
         </button>
     </div>
+    <% if (request.getParameter("success") != null) { %>
+        <div class="alert alert-success">User added successfully.</div>
+    <% } %>
+    <% if (request.getParameter("error") != null) { %>
+        <div class="alert alert-danger"><%= SecurityUtil.escapeHtml(request.getParameter("error")) %></div>
+    <% } %>
 
     <!-- Add User Modal -->
     <div class="modal fade" id="addUserModal" tabindex="-1">
@@ -35,22 +42,27 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <form action="../register" method="post">
+                    <input type="hidden" name="csrfToken" value="<%= csrfToken %>">
                     <div class="modal-body">
                         <div class="mb-3">
                             <label class="form-label">Username</label>
-                            <input type="text" name="username" class="form-control" required>
+                            <input type="text" name="username" class="form-control" maxlength="30" pattern="[A-Za-z0-9_]{3,30}" required>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Password</label>
-                            <input type="password" name="password" class="form-control" required>
+                            <input type="password" name="password" class="form-control" minlength="8" maxlength="72" required>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Full Name</label>
-                            <input type="text" name="fullName" class="form-control" required>
+                            <input type="text" name="fullName" class="form-control" maxlength="100" required>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Email</label>
-                            <input type="email" name="email" class="form-control" required>
+                            <input type="email" name="email" class="form-control" maxlength="100" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Phone</label>
+                            <input type="tel" name="phone" class="form-control" inputmode="numeric" pattern="[0-9]{10,15}" maxlength="15" required>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Role</label>
@@ -87,9 +99,9 @@
             %>
             <tr>
                 <td><%= u.getUserId() %></td>
-                <td><%= u.getUsername() %></td>
-                <td><%= u.getFullName() %></td>
-                <td><%= u.getEmail() %></td>
+                <td><%= SecurityUtil.escapeHtml(u.getUsername()) %></td>
+                <td><%= SecurityUtil.escapeHtml(u.getFullName()) %></td>
+                <td><%= SecurityUtil.escapeHtml(u.getEmail()) %></td>
                 <td><%= u.getRoleId() == 1 ? "Admin" : (u.getRoleId() == 2 ? "Customer" : "Staff") %></td>
             </tr>
             <% } %>

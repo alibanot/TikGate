@@ -1,10 +1,12 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
-<%@ page import="com.tikgate.model.*, com.tikgate.dao.*, java.util.*" %>
+<%@ page import="com.tikgate.model.*, com.tikgate.dao.*, com.tikgate.util.SecurityUtil, com.tikgate.util.PricingUtil, java.util.*" %>
 <%!
     private String renderSeatSection(String sectionName, String sectionCode, Map sectionRows, SeatDAO seatDAO, int eventId) {
         StringBuilder html = new StringBuilder();
+        String safeSectionName = SecurityUtil.escapeHtml(sectionName);
+        String safeSectionCode = SecurityUtil.escapeHtml(sectionCode);
         html.append("<section class=\"seat-section\">");
-        html.append("<div class=\"section-heading\"><strong>").append(sectionCode).append("</strong><span>").append(sectionName).append("</span></div>");
+        html.append("<div class=\"section-heading\"><strong>").append(safeSectionCode).append("</strong><span>").append(safeSectionName).append("</span></div>");
 
         Map rows = (Map) sectionRows.get(sectionName);
         if (rows == null || rows.isEmpty()) {
@@ -25,12 +27,12 @@
             for (int i = 0; i < rowSeats.size(); i++) {
                 Seat s = (Seat) rowSeats.get(i);
                 boolean available = seatDAO.isSeatAvailable(eventId, s.getSeatId());
-                String label = s.getRowNo() + s.getSeatNumber();
+                String label = SecurityUtil.escapeHtml(s.getRowNo() + s.getSeatNumber());
                 html.append("<label class=\"seat-label").append(available ? "" : " seat-booked").append("\" title=\"")
-                    .append(sectionName).append(" | Row ").append(s.getRowNo()).append(" Seat ").append(s.getSeatNumber()).append("\">");
+                    .append(safeSectionName).append(" | Row ").append(SecurityUtil.escapeHtml(s.getRowNo())).append(" Seat ").append(SecurityUtil.escapeHtml(s.getSeatNumber())).append("\">");
                 if (available) {
                     html.append("<input type=\"checkbox\" name=\"seatIds\" value=\"").append(s.getSeatId())
-                        .append("\" class=\"seat-input\" data-seat=\"").append(sectionCode).append(" ").append(label).append("\">");
+                        .append("\" class=\"seat-input\" data-seat=\"").append(safeSectionCode).append(" ").append(label).append("\">");
                 }
                 html.append("<span class=\"seat-face\">").append(label).append("</span>");
                 html.append("</label>");
@@ -50,15 +52,21 @@
         response.sendRedirect("../login.jsp");
         return;
     }
+    String csrfToken = SecurityUtil.ensureCsrfToken(request);
     String idParam = request.getParameter("id");
     if (idParam == null) {
         response.sendRedirect("dashboard.jsp");
         return;
     }
-    int eventId = Integer.parseInt(idParam);
+    Integer eventIdValue = ValidationUtil.parsePositiveInt(idParam);
+    if (eventIdValue == null) {
+        response.sendRedirect("dashboard.jsp");
+        return;
+    }
+    int eventId = eventIdValue;
     EventDAO eventDAO = new EventDAO();
     Event event = eventDAO.getEventById(eventId);
-    if (event == null) {
+    if (event == null || !"ACTIVE".equals(event.getStatus())) {
         response.sendRedirect("dashboard.jsp");
         return;
     }
@@ -91,7 +99,7 @@
         }
     }
 
-    double ticketPrice = 150.00;
+    double ticketPrice = PricingUtil.getTicketPrice();
 %>
 <!DOCTYPE html>
 <html lang="en">
@@ -432,21 +440,28 @@
         <div class="booking-header">
             <div>
                 <h1>Choose Your Seats</h1>
-                <p><%= event.getEventName() %> | <%= event.getEventDate() %> | <%= event.getStartTime() %></p>
+                <p><%= SecurityUtil.escapeHtml(event.getEventName()) %> | <%= event.getEventDate() %> | <%= SecurityUtil.escapeHtml(event.getStartTime()) %></p>
             </div>
             <span class="badge rounded-pill text-bg-dark px-3 py-2"><i class="fas fa-ticket me-1"></i> RM<%= String.format("%.2f", ticketPrice) %> per seat</span>
         </div>
 
         <% if (request.getParameter("error") != null) { %>
             <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <%= "seat_taken".equals(request.getParameter("error")) ? "Sorry, one of those seats was just taken. Please choose again." : "Booking failed. Please try again." %>
+                <%
+                    String error = request.getParameter("error");
+                    String message = "Booking failed. Please try again.";
+                    if ("seat_taken".equals(error)) message = "Sorry, one of those seats was just taken. Please choose again.";
+                    else if ("invalid_seat".equals(error)) message = "Please choose only valid seats from the map.";
+                    else if ("too_many_seats".equals(error)) message = "You can book up to 10 seats at a time.";
+                %>
+                <%= message %>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         <% } %>
 
         <form action="../bookTicket" method="post" id="bookingForm">
+            <input type="hidden" name="csrfToken" value="<%= csrfToken %>">
             <input type="hidden" name="eventId" value="<%= eventId %>">
-            <input type="hidden" name="price" value="<%= String.format("%.2f", ticketPrice) %>">
 
             <div class="row g-4">
                 <div class="col-xl-9">
@@ -500,17 +515,17 @@
                         <div class="card-body">
                             <div class="mb-3">
                                 <label class="text-muted small d-block">Event Name</label>
-                                <span class="fw-bold fs-5"><%= event.getEventName() %></span>
+                                <span class="fw-bold fs-5"><%= SecurityUtil.escapeHtml(event.getEventName()) %></span>
                             </div>
                             <div class="mb-3">
                                 <label class="text-muted small d-block">Tournament</label>
-                                <span class="fw-bold"><%= tourName %></span>
+                                <span class="fw-bold"><%= SecurityUtil.escapeHtml(tourName) %></span>
                             </div>
                             <hr>
                             <div class="mb-3">
                                 <label class="text-muted small d-block">Date & Time</label>
                                 <span class="fw-bold"><i class="far fa-calendar-alt me-1"></i> <%= event.getEventDate() %></span><br>
-                                <span class="fw-bold"><i class="far fa-clock me-1"></i> <%= event.getStartTime() %></span>
+                                <span class="fw-bold"><i class="far fa-clock me-1"></i> <%= SecurityUtil.escapeHtml(event.getStartTime()) %></span>
                             </div>
                             <hr>
                             <div class="mb-3">
@@ -568,9 +583,12 @@
             return;
         }
 
-        selectedSeats.innerHTML = checkedSeats
-            .map(input => '<span><i class="fas fa-chair me-1"></i>' + input.dataset.seat + '</span>')
-            .join('');
+        selectedSeats.innerHTML = '';
+        checkedSeats.forEach(input => {
+            const span = document.createElement('span');
+            span.textContent = input.dataset.seat;
+            selectedSeats.appendChild(span);
+        });
         seatHelp.className = 'alert alert-success small border-0';
         seatHelp.innerHTML = '<i class="fas fa-check-circle me-1"></i> Ready for payment.';
     }

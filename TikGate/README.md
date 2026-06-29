@@ -4,7 +4,7 @@
 - **IDE**: IntelliJ IDEA
 - **JDK**: 11
 - **Server**: Apache Tomcat 9
-- **Database**: MySQL 8.0+ (Oracle MySQL 23ai compatible)
+- **Database**: Oracle Database 23ai Free
 - **Front-end**: JSP, JSTL, Bootstrap 4
 - **Back-end**: Java Servlets, JDBC
 
@@ -16,7 +16,7 @@
 
 ## Setup Instructions
 1. **Database Setup**:
-   - Create a database named `tikgate`.
+   - Create/use an Oracle schema for TikGate.
    - Execute `db_schema.sql` to create tables.
    - Execute `sample_data.sql` to populate initial data.
 2. **Project Configuration**:

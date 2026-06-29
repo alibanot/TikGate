@@ -1,5 +1,5 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
-<%@ page import="com.tikgate.model.*, com.tikgate.dao.*, java.util.List" %>
+<%@ page import="com.tikgate.model.*, com.tikgate.dao.*, com.tikgate.util.SecurityUtil, java.util.List" %>
 <%
     User user = (User) session.getAttribute("user");
     if (user == null || user.getRoleId() != 2) {
@@ -9,6 +9,7 @@
 
     BookingDAO bookingDAO = new BookingDAO();
     List bookings = bookingDAO.getBookingsByUser(user.getUserId());
+    String error = request.getParameter("error");
 %>
 <!DOCTYPE html>
 <html lang="en">
@@ -244,6 +245,9 @@
 
 <main class="main-content">
     <div class="container-fluid bookings-shell">
+        <% if (error != null) { %>
+            <div class="alert alert-danger border-0 shadow-sm"><%= SecurityUtil.escapeHtml(error.replace("_", " ")) %></div>
+        <% } %>
         <% if (bookings == null || bookings.isEmpty()) { %>
             <div class="empty-state">
                 <i class="fas fa-ticket-alt"></i>
@@ -266,7 +270,7 @@
                     EventDAO eventDAO = new EventDAO();
                     Event event = eventDAO.getEventById(b.getEventId());
                     TicketDAO ticketDAO = new TicketDAO();
-                    Ticket ticket = ticketDAO.getTicketByBookingId(b.getBookingId());
+                    List<Ticket> tickets = ticketDAO.getTicketsByBookingId(b.getBookingId());
                     boolean paid = "PAID".equals(b.getStatus());
                 %>
                 <article class="booking-card">
@@ -274,16 +278,16 @@
                         <div class="d-flex justify-content-between align-items-start">
                             <span class="status-pill <%= paid ? "status-paid" : "status-pending" %>">
                                 <i class="fas <%= paid ? "fa-check-circle" : "fa-clock" %>"></i>
-                                <%= b.getStatus() %>
+                                <%= SecurityUtil.escapeHtml(b.getStatus()) %>
                             </span>
                             <span class="booking-id">#<%= b.getBookingId() %></span>
                         </div>
                     </div>
                     <div class="booking-body">
-                        <h3 class="booking-title"><%= event != null ? event.getEventName() : "Unknown Event" %></h3>
+                        <h3 class="booking-title"><%= SecurityUtil.escapeHtml(event != null ? event.getEventName() : "Unknown Event") %></h3>
                         <div class="booking-meta">
                             <div><i class="far fa-calendar-alt"></i><%= event != null ? event.getEventDate() : "N/A" %></div>
-                            <div><i class="far fa-clock"></i><%= event != null ? event.getStartTime() : "N/A" %></div>
+                            <div><i class="far fa-clock"></i><%= SecurityUtil.escapeHtml(event != null ? event.getStartTime() : "N/A") %></div>
                             <div><i class="fas fa-receipt"></i>Booked on <%= b.getBookingDate() %></div>
                         </div>
                         <div class="amount-row">
@@ -292,10 +296,14 @@
                         </div>
                     </div>
                     <div class="booking-action">
-                        <% if (paid && ticket != null) { %>
-                            <a href="ticketDetails.jsp?qrCode=<%= ticket.getQrCode() %>" class="btn btn-booking-outline w-100">
-                                <i class="fas fa-qrcode me-2"></i>View Ticket
-                            </a>
+                        <% if (paid && tickets != null && !tickets.isEmpty()) { %>
+                            <% for (int tIndex = 0; tIndex < tickets.size(); tIndex++) {
+                                Ticket ticket = tickets.get(tIndex);
+                            %>
+                                <a href="ticketDetails.jsp?qrCode=<%= SecurityUtil.escapeHtml(ticket.getQrCode()) %>" class="btn btn-booking-outline w-100 mb-2">
+                                    <i class="fas fa-qrcode me-2"></i>View Ticket <%= tickets.size() > 1 ? (tIndex + 1) : "" %>
+                                </a>
+                            <% } %>
                         <% } else if ("PENDING".equals(b.getStatus())) { %>
                             <a href="payment.jsp?bookingId=<%= b.getBookingId() %>" class="btn btn-booking-primary w-100">
                                 <i class="fas fa-lock me-2"></i>Pay Now

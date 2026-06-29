@@ -2,6 +2,8 @@ package com.tikgate.servlet;
 
 import com.tikgate.dao.UserDAO;
 import com.tikgate.model.User;
+import com.tikgate.util.SecurityUtil;
+import com.tikgate.util.ValidationUtil;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.*;
@@ -12,12 +14,28 @@ public class LoginServlet extends HttpServlet {
     private UserDAO userDAO = new UserDAO();
 
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        String username = request.getParameter("username");
-        String password = request.getParameter("password");
+        if (!SecurityUtil.isValidCsrf(request)) {
+            request.setAttribute("error", "Your session expired. Please try again.");
+            request.getRequestDispatcher("login.jsp").forward(request, response);
+            return;
+        }
+
+        String username = ValidationUtil.clean(request.getParameter("username"));
+        String password = ValidationUtil.clean(request.getParameter("password"));
+
+        if (ValidationUtil.isBlank(username) || ValidationUtil.isBlank(password)) {
+            request.setAttribute("error", "Username and password are required.");
+            request.getRequestDispatcher("login.jsp").forward(request, response);
+            return;
+        }
 
         User user = userDAO.login(username, password);
         if (user != null) {
-            HttpSession session = request.getSession();
+            HttpSession oldSession = request.getSession(false);
+            if (oldSession != null) {
+                oldSession.invalidate();
+            }
+            HttpSession session = request.getSession(true);
             session.setAttribute("user", user);
             if (user.getRoleId() == 1) { // Admin
                 response.sendRedirect("admin/dashboard.jsp");

@@ -1,11 +1,12 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
-<%@ page import="com.tikgate.model.User" %>
+<%@ page import="com.tikgate.model.User, com.tikgate.util.SecurityUtil" %>
 <%
     User user = (User) session.getAttribute("user");
     if (user == null || (user.getRoleId() != 3 && user.getRoleId() != 1)) {
         response.sendRedirect("../login.jsp");
         return;
     }
+    String csrfToken = SecurityUtil.ensureCsrfToken(request);
 %>
 <!DOCTYPE html>
 <html lang="en">
@@ -25,7 +26,7 @@
     <div class="container-fluid">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2>Ticket Verification</h2>
-            <div class="text-muted">User: <%= user.getFullName() %></div>
+            <div class="text-muted">User: <%= SecurityUtil.escapeHtml(user.getFullName()) %></div>
         </div>
 
         <div class="row justify-content-center mt-5">
@@ -35,8 +36,9 @@
                         <i class="fas fa-qrcode fa-5x text-primary mb-4"></i>
                         <h4 class="mb-4">Scan or Enter Ticket Code</h4>
                         <form action="verifyTicket" method="post">
+                            <input type="hidden" name="csrfToken" value="<%= csrfToken %>">
                             <div class="input-group input-group-lg mb-3">
-                                <input type="text" name="qrCode" class="form-control" placeholder="Enter QR Code" required autofocus>
+                                <input type="text" name="qrCode" class="form-control" placeholder="Enter QR Code" maxlength="36" pattern="[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}" required autofocus>
                                 <button class="btn btn-primary" type="submit">Verify</button>
                             </div>
                             <p class="text-muted small">Enter the unique code found on the customer's ticket.</p>

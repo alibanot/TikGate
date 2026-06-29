@@ -1,4 +1,16 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<%@ page import="com.tikgate.model.User, com.tikgate.util.SecurityUtil" %>
+<%
+    User user = (User) session.getAttribute("user");
+    if (user == null || (user.getRoleId() != 3 && user.getRoleId() != 1)) {
+        response.sendRedirect("../login.jsp");
+        return;
+    }
+    String message = (String) request.getAttribute("message");
+    if (message == null) {
+        message = "No verification result is available. Please scan a ticket first.";
+    }
+%>
 <!DOCTYPE html>
 <html>
 <head>
@@ -14,7 +26,7 @@
             <h3>Verification Result</h3>
             <hr>
             <div class="alert alert-info">
-                <%= request.getAttribute("message") %>
+                <%= SecurityUtil.escapeHtml(message) %>
             </div>
             <a href="verification.jsp" class="btn btn-primary">Scan Another Ticket</a>
         </div>
